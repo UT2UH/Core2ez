@@ -1,23 +1,48 @@
-#ifndef _M5SOUND_H_
-#define _M5SOUND_H_
+#ifndef _EZSOUND_H_
+#define _EZSOUND_H_
 
 #include <Arduino.h>
 
-#define I2S_DOUT           2
-#define I2S_BCLK          12
-#define I2S_LRC            0
-#define DMA_BUF_COUNT      4
-#define DMA_BUF_LEN      256
-#define SAMPLERATE     24000
-#define BUFLEN            32
-#define TWO_PI             6.283185307179586
+// Full-duplex does not work on systems that share the clock pins between input and output.
+// (Or so I believe. If you have it working, please file an issue to let me know how.)
+// #define I2S_FULL_DUPLEX
+
+#define SAMPLERATE  16000
+
+#define TX_DEV               I2S_NUM_0
+#define TX_DOUT              2
+#define TX_BCLK             12
+#define TX_LRC               0
+#define TX_MODE              (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_TX)
+#define TX_CHANNELS          1
+#define TX_CHANNEL_FORMAT    I2S_CHANNEL_FMT_ONLY_RIGHT
+#define TX_DMA_BUF_COUNT     4
+#define TX_DMA_BUF_LEN     128
+#define TX_CHUNKSIZE        32
+
+
+#define RX_DEV               I2S_NUM_0
+#define RX_DIN              34
+#define RX_BCLK             12
+#define RX_LRC               0
+#define RX_MODE              (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_RX |I2S_MODE_PDM)
+#define RX_CHANNELS          1
+#define RX_CHANNEL_FORMAT    I2S_CHANNEL_FMT_ONLY_RIGHT
+#define RX_DMA_BUF_COUNT     4
+#define RX_DMA_BUF_LEN     128
+
+
+#define EZ_TWO_PI            6.283185307179586
+
+// switches off amplifier chip after 1 sec. Set to 0 to keep amplifier on.
+#define AMP_STANDBY     1000
 
 
 // defaults
-#define ATTACK            10
+#define ATTACK            10      // prevents clicks
 #define DECAY              0
 #define SUSTAIN            1.0
-#define RELEASE           10
+#define RELEASE           10      // prevents clicks
 #define GAIN               0.5
 
 
@@ -71,8 +96,6 @@
 #define NOTE_Bb6   1864.66
 #define NOTE_B6    1975.53
 
-
-
 enum waveform_t {
   SINE,
   SQUARE,
@@ -81,45 +104,137 @@ enum waveform_t {
   NOISE
 };
 
-class ezSound {
+
+class ezSoundSource {
  public:
-  static ezSound* instance;
-  ezSound();
-  void begin();
-  void update();
-  void delay(uint16_t msec);
-  void waitForSilence(uint16_t msec = 0);
-  bool silence(uint16_t msec = 0);
+  static std::vector<ezSoundSource*> instances;
+  ezSoundSource();
+  ~ezSoundSource();
+  virtual uint16_t read(int16_t* buffer, uint16_t size);
+  bool playing();
  protected:
-  friend class ezSynth;   // for _sineTable
-  float _sineTable[100];
-  uint32_t _silentSince;
-  int16_t _buf[BUFLEN * 2];
-  int32_t _mixbuf[BUFLEN];
-  size_t _bytes_left;
+  bool _playing = false;
 };
 
-class ezSynth {
+class ezSoundSink {
  public:
-  static std::vector<ezSynth*> instances;
+  static ezSoundSink* recordingInstance;
+  ~ezSoundSink();
+  virtual void update();
+  bool recording();
+};
+
+
+// class ezPlay : public ezSoundSource {
+//  public:
+//   ezPlay(uint8_t* rawSamples, uint32_t length, uint32_t sampleRate);
+//   ezPlay(uint8_t* ROMwav);
+//   ezPlay(const char* path);
+//   ezPlay(const String& path);
+//   void play();
+//   void pause();
+//   void gain(float newGain);
+//   uint32_t samplerate();
+//   float length();
+//   float position(float secs);
+//   float position();
+// }
+
+// class ezRecord : public ezSoundSink {
+//  public:
+//   ezRecord(const char* path, uint32_t samplerate = 0);
+//   ezRecord(const String& path, uint32_t samplerate = 0);
+//   void record();
+//   void stop();
+//   void update();
+// //  void gain(float newGain);
+//   float position();
+//   bool _write(uint8_t* buffer, uint32_t length);
+// };
+
+class ezSynth : public ezSoundSource {
+ public:
   ezSynth(waveform_t waveform_ = SINE, float freq_ = 0,
           uint16_t attack_ = ATTACK, uint16_t decay_ = DECAY,
           float sustain_ = SUSTAIN, uint16_t release_ = RELEASE,
           float gain_ = GAIN);
-  ~ezSynth();
-  bool fillSbuf();
+  virtual uint16_t read(int16_t* buffer, uint16_t size);
   void start();
   void stop();
   void playFor(uint32_t msec);
   waveform_t waveform;
-  float freq, gain, envelope, sustain, phase;
+  float gain, freq, envelope, sustain, phase;
   uint16_t attack, decay, release;
   uint32_t startTime, stopTime;
  protected:
-  friend class ezSound;
-  inline int16_t scaleAmplitude(float gain);
   float _startEnvelope;
-  int16_t _sbuf[BUFLEN];
 };
+
+#define EZSOUND ezSoundClass::instance()
+class ezSoundClass{
+ // Singleton stuff
+ public:
+  static ezSoundClass& instance() {
+    static ezSoundClass INSTANCE;
+    return INSTANCE;
+  }
+  ezSoundClass(ezSoundClass const&)    = delete;
+  void operator=(ezSoundClass const&)  = delete;
+ private:
+  ezSoundClass() {}
+
+ public:
+  void begin();
+  void start();
+  void stop();
+  void update();
+  void reg(ezSoundSource* source);
+  void dereg(ezSoundSource* source);
+  void delay(uint16_t msec);
+  void waitForSilence(uint16_t msec = 0);
+  bool silence(uint16_t msec = 0);
+  void amplifier(bool state, bool force = false);
+  uint32_t samplerate = SAMPLERATE;
+  bool running = false;
+
+ protected:
+  friend class ezSynth;   // for _sineTable
+  float _sineTable[100];
+  uint32_t _silentSince;
+  int16_t _tmpbuf[TX_CHUNKSIZE];
+  int16_t _outbuf[TX_CHUNKSIZE * TX_CHANNELS];
+  int32_t _mixbuf[TX_CHUNKSIZE];
+  size_t _bytes_left          = 0;
+  bool _amp_on                = false;
+};
+
+#define EZSOUNDIN ezSoundInClass::instance()
+class ezSoundInClass : public ezSoundSource {
+ // Singleton stuff
+ public:
+  static ezSoundInClass& instance() {
+    static ezSoundInClass INSTANCE;
+    return INSTANCE;
+  }
+  ezSoundInClass(ezSoundInClass const&)  = delete;
+  void operator=(ezSoundInClass const&)  = delete;
+ private:
+  ezSoundInClass() {}
+
+ public:
+  void begin();
+  void start();
+  void stop();
+  void update();
+  virtual uint16_t read(int16_t* buffer, uint16_t size);
+  uint32_t samplerate = SAMPLERATE;
+  bool running = false;
+
+ protected:
+  int16_t _read_tmp[RX_DMA_BUF_LEN / 2];
+};
+
+extern ezSoundClass& ezSound;
+extern ezSoundInClass& ezSoundIn;
 
 #endif /* _M5SOUND_H_ */

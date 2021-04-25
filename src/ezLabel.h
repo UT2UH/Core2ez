@@ -2,42 +2,55 @@
 #define _EZLABEL_H_
 
 #include <ezWidget.h>
+#include <ezValues.h>
+#include <ezTheme.h>
 
-enum align_t {
-  LEFT,
-  CENTER,
-  RIGHT
+struct line_t {
+  int16_t position;
+  String line;
 };
-
-enum valign_t {
-  TOP,
-  MIDDLE,
-  BOTTOM
-};
-
 
 class ezLabel : public ezWidget {
  public:
-                  ezLabel();
-                  ezLabel(ezWidget& parentWidget);
-                  ezLabel(int16_t x_, int16_t y_, int16_t w_, int16_t h_,
-                          String text_ = "");
-                  ezLabel(ezWidget& s_,
-                          int16_t x_, int16_t y_, int16_t w_, int16_t h_,
-                          String text_ = "");
-  void            init(ezWidget* pwPtr,
-                       int16_t x_, int16_t y_, int16_t w_, int16_t h_,
-                       String text_);
+  ezLabel(ezWidget& parentWidget,
+          int16_t x_ = EZ_INVALID, int16_t y_ = EZ_INVALID,
+          int16_t w_ = 0, int16_t h_ = 0,
+          String text_         = "",
+          WidgetColors colors_ = THEME_COLORS,
+          ezFont font_ = THEME_FONT,
+          int16_t align_ = EZ_LEFT,
+          int16_t valign_ = EZ_CENTER,
+          int16_t dx_ = 0, int16_t dy_ = 0);
+
+  ezLabel(int16_t x_ = EZ_INVALID, int16_t y_ = EZ_INVALID,
+          int16_t w_ = 0, int16_t h_ = 0,
+          String text_         = "",
+          WidgetColors colors_ = THEME_COLORS,
+          ezFont font_ = THEME_FONT,
+          int16_t align_ = EZ_LEFT,
+          int16_t valign_ = EZ_CENTER,
+          int16_t dx_ = 0, int16_t dy_ = 0);
+
+  void init(ezWidget* pwPtr,
+            int16_t x_, int16_t y_, int16_t w_, int16_t h_, String text_,
+            WidgetColors colors_, ezFont font_, int16_t align_,
+            int16_t valign_, int16_t dx_, int16_t dy_);
+
   virtual void    draw();
-  String          text       = "";
-  uint16_t        color      = TFT_WHITE;
-  uint8_t         textSize   = 1;
-  align_t         align      = CENTER;
-  valign_t        valign     = MIDDLE;
-  uint8_t         padding    = 0;
-  int16_t         dx         = 0;
-  int16_t         dy         = 0;
-  const GFXfont*  font       = FSS9;
+  String          text        = "";
+  ezFont          font        = FSS9;
+  int16_t         align       = EZ_LEFT;
+  int16_t         valign      = EZ_TOP;
+  int16_t         dx          = 0;
+  int16_t         dy          = 0;
+  bool            wrap        = false;
+  bool            snug        = false;
+  float           lineSpacing = 1.0;
+
+ protected:
+  void _fitLines(String text, uint16_t max_width, uint16_t min_width,
+                 std::vector<line_t>& lines);
+  void _wrapLines(String text, uint16_t width, std::vector<line_t>& lines);
 };
 
 

@@ -1,3 +1,6 @@
+#ifndef _EZDISPLAYZONE_H_
+#define _EZDISPLAYZONE_H_
+
 #include <ezPointAndZone.h>
 
 #include <M5Core2.h>
@@ -5,42 +8,64 @@
 
 
 // Special fake font pointers to access the older non FreeFonts
-// in a unified way. Only valid if passed to font
-#define MONO6x8				  (GFXfont*) 1
-#define SANS16				  (GFXfont*) 2
-#define SANS26				  (GFXfont*) 4
-#define NUMONLY48			  (GFXfont*) 6
-#define NUMONLY7SEG48		(GFXfont*) 7
-#define NUMONLY75			  (GFXfont*) 8
+// in a unified way. Only valid if passed to ezFont
+#define MONO6x8          (GFXfont*) 1
+#define SANS16          (GFXfont*) 2
+#define SANS26          (GFXfont*) 4
+#define NUMONLY48        (GFXfont*) 6
+#define NUMONLY7SEG48    (GFXfont*) 7
+#define NUMONLY75        (GFXfont*) 8
 // The following fonts are just scaled up from previous ones (textSize 2)
 // But they might still be useful.
-#define mono12x16			  (GFXfont*) 9
-#define SANS32				  (GFXfont*) 10
-#define SANS52				  (GFXfont*) 12
-#define NUMONLY96			  (GFXfont*) 14
-#define NUMONLY7SEG96		(GFXfont*) 15
-#define NUMONLY150			(GFXfont*) 16
+#define mono12x16        (GFXfont*) 9
+#define SANS32          (GFXfont*) 10
+#define SANS52          (GFXfont*) 12
+#define NUMONLY96        (GFXfont*) 14
+#define NUMONLY7SEG96    (GFXfont*) 15
+#define NUMONLY150      (GFXfont*) 16
 
 #include <Free_Fonts.h>
 
+class ezDisplayZone;
+
+class ezFont {
+ public:
+  ezFont();
+  ezFont(uint8_t font_);
+  ezFont(const GFXfont* gfxFont_);
+  operator bool();
+  ezFont& operator=(const GFXfont* gfxFont_) ;
+  ezFont& operator=(uint8_t font_);
+  void set(ezDisplayZone& dz);
+  int16_t height();
+  uint8_t textsize;
+ private:
+  const GFXfont* _gfxFont;
+  uint8_t _font;
+};
 
 
 
-class ezDisplayZone : public Zone {
+class ezDisplayZone : public ezZone {
  public:
   ezDisplayZone* parent();
-  void     push();
+  virtual void push();
   void     push(TFT_eSprite* s, int16_t ox, int16_t oy, int16_t w_, int16_t h_, int16_t x_, int16_t y_);
   void     spriteToDisplay(TFT_eSprite* s, int16_t ox, int16_t oy, int16_t w_, int16_t h_, int16_t x_, int16_t y_);
-  void     direct();
   virtual void spriteBuffer(int16_t w_ = -1, int16_t h_ = -1);
-  void     ezFont(const GFXfont* gfxFont);
+  void     direct();
+  void     refresh();
+  void     setFont(ezFont& f);
   void     drawRect(uint32_t color);
   void     fillRect(uint32_t color);
   void     drawRoundRect(int32_t radius, uint32_t color);
   void     fillRoundRect(int32_t radius, uint32_t color);
-  void     drawCircle(Point p, int32_t r, uint32_t color);
-  void     fillCircle(Point p, int32_t r, uint32_t color);
+  void     drawCircle(ezPoint p, int32_t r, uint32_t color);
+  void     fillCircle(ezPoint p, int32_t r, uint32_t color);
+  void     drawTriangle(ezPoint p0, ezPoint p1, ezPoint p2, uint32_t color);
+  void     fillTriangle(ezPoint p0, ezPoint p1, ezPoint p2, uint32_t color);
+
+  ///@{   @name testgroup
 
   void     drawPixel(int32_t x_, int32_t y_, uint32_t color);
   void     drawChar(int32_t x_, int32_t y_, uint16_t c, uint32_t color, uint32_t bg, uint8_t size);
@@ -48,6 +73,9 @@ class ezDisplayZone : public Zone {
   void     drawFastVLine(int32_t x_, int32_t y_, int32_t h_, uint32_t color);
   void     drawFastHLine(int32_t x_, int32_t y_, int32_t w_, uint32_t color);
   void     fillRect(int32_t x_, int32_t y_, int32_t w_, int32_t h_, uint32_t color);
+
+  ///@}
+
   int16_t  drawChar(uint16_t uniCode, int32_t x_, int32_t y_, uint8_t font);
   int16_t  drawChar(uint16_t uniCode, int32_t x_, int32_t y_);
   int16_t  height(void);
@@ -110,10 +138,11 @@ class ezDisplayZone : public Zone {
   uint16_t decodeUTF8(uint8_t c);
   size_t   write(uint8_t utf8);
 
-  TFT_eSprite*      sprite    = nullptr;
-  int16_t           offsetX   = 0;
-  int16_t           offsetY   = 0;
-
-
+  TFT_eSprite*      sprite     = nullptr;
+  uint8_t           spriteBPP  = 16;
+  ezPoint           offset     = ezPoint(0, 0);
   ezDisplayZone*    _parent    = nullptr;
 };
+
+
+#endif /* _EZDISPLAYZONE_H_ */

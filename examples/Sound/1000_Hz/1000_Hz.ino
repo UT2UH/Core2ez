@@ -3,16 +3,17 @@
 
 ezSynth s(SINE, 1000);
 
-//            x   y    w   h     label
-ezButton btn(50, 80, 220, 80, "1000 Hz");
+//            x   y    w   h     label   when off      while pressed  font
+ezButton btn(50, 80, 220, 80, "1000 Hz", THEME_COLORS, THEME_COLORS,  FSSB24);
 
 void setup() {
-	ez.begin();
-  btn.label.font = FSSB24;
+  ez.begin();
+  btn.on(E_TOUCH  , doFunction { s.start(); });
+  btn.on(E_RELEASE, doFunction { s.stop();  });
 }
 
 void loop() {
-	ez.update();
-  if ( btn.wasPressed()  ) s.start();
-  if ( btn.wasReleased() ) s.stop();
+  ez.update();
 }
+
+

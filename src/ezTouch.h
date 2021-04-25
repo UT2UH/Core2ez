@@ -40,7 +40,7 @@
   has members x and y and can be intialised as follows:
 
     Holds a point on the screen. Has members x and y that hold the coordinates
-    of a touch. Values INVALID_VALUE for x and y indicate an invalid value,
+    of a touch. Values EZ_INVALID for x and y indicate an invalid value,
     and that's what a point starts out with if you declare it without
     parameters. The 'valid()' method tests if a point is valid. If you
     explicitly evaluate a TouchPoint as a boolean ("if (p) ..."), you also get
@@ -157,12 +157,20 @@
 #define CST_INT 39
 
 // Strangely, the value 13 leads to slightly more frequent updates than 10
-#define DEFAULT_INTERVAL	13
+#define DEFAULT_INTERVAL  13
 
-class ezTouch {
+class ezTouchClass {
  public:
-  static ezTouch* instance;
-  ezTouch();
+  static ezTouchClass& instance() {
+    static ezTouchClass INSTANCE;
+    return INSTANCE;
+  }
+  ezTouchClass(ezTouchClass const&)         = delete;
+  void operator=(ezTouchClass const&)  = delete;
+ private:
+  ezTouchClass() {}
+
+ public:
   void begin();
   uint8_t ft6336(uint8_t reg);
   void ft6336(uint8_t reg, uint8_t value);
@@ -173,14 +181,16 @@ class ezTouch {
   bool read();
   bool ispressed();
   void dump();
-  Point getPressPoint();
+  ezPoint getPressPoint();
   uint8_t points;
   bool changed, wasRead;
   bool pchanged[2];
-  Point point[2];
+  ezPoint point[2];
  protected:
   uint8_t _interval;
   uint32_t _lastRead;
 };
+
+extern ezTouchClass& ezTouch;
 
 #endif /* _EZTOUCH_H_ */

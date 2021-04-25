@@ -16,8 +16,8 @@ synths going at the same time.
 #define WHITE_KEY_HEIGHT   240
 #define BLACK_KEY_WIDTH     30
 #define BLACK_KEY_HEIGHT   160
-#define WHITE_KEY_COLORS    {WHITE, NODRAW, BLACK}
-#define BLACK_KEY_COLORS    {BLACK, NODRAW, NODRAW}
+#define WHITE_KEY_COLORS    {TFT_WHITE, NODRAW, TFT_BLACK}
+#define BLACK_KEY_COLORS    {TFT_BLACK, NODRAW, NODRAW}
 
 ezButton keys[KEYS];
 
@@ -30,19 +30,16 @@ ezSynth synth[KEYS] = ezSynth(TRIANGLE, 0, 50, 300, 0.6, 1000, 0.4);
 void setup() {
   ez.begin();
 
-  ez.Screen.colors.fill = BLACK;
-
-  ez.Screen.spriteBuffer();      // Prevents flicker, buffer until push()
-  ez.Screen.glissando = true;
+  ezScreen.colors.fill = TFT_BLACK;
+  ezScreen.spriteBuffer();      // Prevents flicker, buffer until push()
+  ezScreen.glissando = true;
 
   // Set up white keys
-
   for (uint8_t n = 0; n < 8; n++) {
     keys[n].set(n * WHITE_KEY_WIDTH, 0, WHITE_KEY_WIDTH, WHITE_KEY_HEIGHT);
     keys[n].colors   = WHITE_KEY_COLORS;
     keys[n].onColors = {NODRAW, NODRAW, NODRAW};
     keys[n].userData = n;
-    ez.Screen.add(keys[n]);
   }
 
   // Set up Black keys
@@ -53,32 +50,32 @@ void setup() {
     keys[n].colors   = BLACK_KEY_COLORS;
     keys[n].onColors = {NODRAW, NODRAW, NODRAW};
     keys[n].userData = n;
-    ez.Screen.add(keys[n]);
   }
 
-  ez.Screen.focus();
-  ez.Screen.fillRect(0, 0, 320, 5, BLACK);   // top of keys as straight line
-  ez.Screen.push();
+  ezScreen.focus();
+  ezScreen.fillRect(0, 0, 320, 5, TFT_BLACK);   // top of keys as straight line
+  ezScreen.push();
 
   // Set up synths with their notes
-  const float notes[KEYS] = { NOTE_F4, NOTE_G4, NOTE_A4, NOTE_B4, NOTE_C5,
-                              NOTE_D5, NOTE_E5, NOTE_F5, NOTE_Gb4, NOTE_Ab4,
+  const float notes[KEYS] = { NOTE_F4,  NOTE_G4,  NOTE_A4,  NOTE_B4,  NOTE_C5,
+                              NOTE_D5,  NOTE_E5,  NOTE_F5,  NOTE_Gb4, NOTE_Ab4,
                               NOTE_Bb4, NOTE_Db5, NOTE_Eb5, NOTE_Gb5 };
   for (uint8_t n = 0; n < 14; n++) synth[n].freq = notes[n];
 
-  ez.Screen.addHandler(keyHandler, E_TOUCH + E_RELEASE);
+  ez.on(E_TOUCH, doFunction {
+    if(eventWidget(ezButton, b)) {
+      synth[b->userData].start();
+    }
+  });
+
+  ez.on(E_RELEASE, doFunction {
+    if (eventWidget(ezButton, b)) {
+      synth[b->userData].stop();
+    }
+  });
+
 }
 
 void loop() {
   ez.update();
-}
-
-void keyHandler(Event& e) {
-  if (!e.widget) return;
-  uint8_t key = e.widget->userData;
-  if (e == E_TOUCH) {
-    synth[key].start();
-  } else {
-    synth[key].stop();
-  }
 }
